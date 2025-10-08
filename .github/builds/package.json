@@ -1,0 +1,12 @@
+{
+  "name": "devbuilds",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "author": "",
+  "license": "LGPL-3.0",
+  "type": "module",
+  "scripts": {
+    "get_number": "node get_number.js"
+  }
+}

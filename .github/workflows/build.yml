@@ -1,0 +1,64 @@
+name: 构建
+
+concurrency:
+  group: "build"
+  cancel-in-progress: false
+
+on:
+  push:
+    branches:
+      - 1.19.4
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 检出代码仓库
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: 设置 Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: 设置 Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: gradle
+
+      - name: 设置 Node JS
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: 获取当前构建编号
+        id: build-number
+        run: |
+          cd .github/builds
+          npm install
+          npm run --silent get_number >> $GITHUB_OUTPUT
+
+      - name: 授予 gradlew 执行权限
+        run: chmod +x gradlew
+
+      - name: 构建
+        run: ./gradlew build -Pmod_version="$(git describe --always --tags --first-parent | cut -c2-)" -Pbuild_number=${{ steps.build-number.outputs.number }}
+
+      - name: 上传到 GitHub Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.jar
+          tag_name: build-${{ steps.build-number.outputs.number }}
+          name: 构建 ${{ steps.build-number.outputs.number }}
+          body: |
+            构建编号: ${{ steps.build-number.outputs.number }}
+            提交哈希: ${{ github.sha }}
+            变更对比: https://github.com/${{ github.repository }}/compare/${{ github.event.before }}...${{ github.event.after }}
+          draft: false
+          prerelease: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
